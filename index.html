@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Don't Look Down 3D</title>
+    <style>
+      body { margin: 0; overflow: hidden; background: #111; }
+      #status {
+        position: absolute;
+        top: 10px;
+        left: 20px;
+        color: white;
+        font-size: 24px;
+        font-family: monospace;
+        background: rgba(0,0,0,0.5);
+        padding: 8px 16px;
+        border-radius: 10px;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  </head>
+  <body>
+    <div id="status">🏃 Don’t Look Down...</div>
+    <script>
+      // THREE setup
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(innerWidth, innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(0, 10, 10);
+      scene.add(light);
+
+      const tiles = [];
+      const tileSize = 2;
+      const rows = 20;
+      const cols = 5;
+      const tileMat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
+
+      for (let z = 0; z < rows; z++) {
+        for (let x = -Math.floor(cols / 2); x <= Math.floor(cols / 2); x++) {
+          const tile = new THREE.Mesh(
+            new THREE.BoxGeometry(tileSize, 0.2, tileSize),
+            tileMat.clone()
+          );
+          tile.position.set(x * tileSize, 0, -z * tileSize);
+          scene.add(tile);
+          tiles.push(tile);
+        }
+      }
+
+      const player = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshStandardMaterial({ color: 0xff00ff })
+      );
+      player.position.set(0, 1, 0);
+      scene.add(player);
+
+      camera.position.set(0, 5, 10);
+      camera.lookAt(player.position);
+
+      let vx = 0;
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") vx = -0.2;
+        if (e.key === "ArrowRight") vx = 0.2;
+      });
+
+      document.addEventListener("keyup", (e) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") vx = 0;
+      });
+
+      let zSpeed = 0.1;
+      let gameOver = false;
+      const status = document.getElementById("status");
+
+      function animate() {
+        if (gameOver) return;
+
+        requestAnimationFrame(animate);
+
+        player.position.x += vx;
+        player.position.z -= zSpeed;
+
+        camera.position.z = player.position.z + 10;
+        camera.lookAt(player.position);
+
+        // remove tiles behind
+        tiles.forEach(tile => {
+          if (!tile.visible && Math.abs(player.position.x - tile.position.x) < 1 &&
+              Math.abs(player.position.z - tile.position.z) < 1) {
+            gameOver = true;
+            status.textContent = "💀 You Fell! Press F5 to Try Again!";
+          }
+
+          if (tile.position.z > player.position.z + 1) {
+            tile.visible = false; // drop behind you
+          }
+        });
+
+        // check fall
+        if (player.position.y < 0 || player.position.x < -tileSize * 3 || player.position.x > tileSize * 3) {
+          gameOver = true;
+          status.textContent = "💀 You Fell! Press F5 to Try Again!";
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      animate();
+    </script>
+  </body>
+</html>
